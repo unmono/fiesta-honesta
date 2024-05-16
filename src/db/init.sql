@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS hamsters(
+    id INTEGER PRIMARY KEY,
+    name VARCHAR
+)
