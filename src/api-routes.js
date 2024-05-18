@@ -13,7 +13,7 @@ export async function apiRoutes (fastify, options) {
 
   fastify.post('/game', (request, reply) => {
     return {
-      description: 'Connecto to the game'
+      description: 'Connect to the game'
     };
   });
 
@@ -27,5 +27,18 @@ export async function apiRoutes (fastify, options) {
     return {
       description: 'Current card'
     };
+  });
+
+  fastify.get('/modes', (request, reply) => {
+    fastify.pg.connect((err, client, release) => {
+      if (err) return reply.send(err)
+
+      client.query(
+        'SELECT * FROM mode;',
+        (err, result) => {
+          reply.send(result.rows);
+        }
+      )
+    })
   });
 }

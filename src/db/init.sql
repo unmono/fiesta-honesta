@@ -28,3 +28,10 @@ CREATE TABLE IF NOT EXISTS card(
     "text" TEXT
 );
 CREATE INDEX prefs_idx ON card(prefs);
+
+
+INSERT INTO "mode" (title, "text")
+VALUES
+    ('croud', 'Everyone for himself'),
+    ('team', 'Team game')
+;

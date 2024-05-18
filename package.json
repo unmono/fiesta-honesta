@@ -4,9 +4,8 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
     "db": "make up-db",
-    "start": "fastify start server.js",
+    "start": "node src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
