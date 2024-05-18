@@ -1,11 +1,12 @@
 {
   "name": "fiesta-honesta",
   "version": "1.0.0",
-  "main": "src/index.js",
+  "main": "src/server.js",
+  "type": "module",
   "scripts": {
     "build": "tsc",
     "db": "make up-db",
-    "start": "node src/index.ts",
+    "start": "fastify start server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,12 +14,13 @@
   "license": "UNLICENSED",
   "description": "",
   "dependencies": {
-    "eta": "^3.4.0",
-    "express": "^4.19.2",
-    "typescript": "^5.4.5"
+    "@fastify/env": "^4.3.0",
+    "@fastify/postgres": "^5.2.2",
+    "fastify": "^4.27.0",
+    "fastify-plugin": "^4.5.1",
+    "pg": "^8.11.5"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
     "@types/node": "^20.12.12"
   }
 }
