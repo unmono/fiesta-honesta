@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="/public/css/styles.css">
+<!--  <script src="https://unpkg.com/htmx.org@1.9.12"></script>-->
+  <script src="/public/js/htmx.js"></script>
+  <title>fh</title>
+</head>
+<body spellcheck="false">
+  <table class="query-container">
+    <tr id="queryRow">
+      <td class="invite">$</td>
+      <td class="input">
+        <form id="inputForm">
+          <textarea
+            id="commandInput" rows="5" maxlength="300" autofocus
+            name="userInput"
+          ></textarea>
+        </form>
+<!--        <button type="submit" form="inputForm">asd</button>-->
+      </td>
+    </tr>
+  </table>
+
+  <script>
+    function refreshEL() {
+      const ci = document.getElementById('commandInput');
+      ci.addEventListener('keypress', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          htmx.ajax(
+            'POST',
+            '/ready',
+            {
+              target: '#queryRow',
+              swap: 'outerHTML',
+              values: {
+                userInput: e.currentTarget.value,
+              }
+            }
+          ).then(() => {
+            refreshEL();
+          });
+        }
+      });
+    }
+    refreshEL();
+
+  </script>
+</body>
+</html>

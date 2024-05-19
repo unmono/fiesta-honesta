@@ -6,17 +6,26 @@
   "scripts": {
     "db": "make up-db",
     "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "unmono <unmono.dev@google.com>",
   "license": "UNLICENSED",
   "description": "",
+  "nodemonConfig": {
+    "watch": [
+      "/src/*"
+    ]
+  },
   "dependencies": {
     "@fastify/env": "^4.3.0",
+    "@fastify/formbody": "^7.4.0",
     "@fastify/postgres": "^5.2.2",
+    "@fastify/static": "^7.0.4",
     "fastify": "^4.27.0",
     "fastify-plugin": "^4.5.1",
+    "nodemon": "^3.1.0",
     "pg": "^8.11.5"
   },
   "devDependencies": {

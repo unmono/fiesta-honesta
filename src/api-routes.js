@@ -18,27 +18,30 @@ export async function apiRoutes (fastify, options) {
   });
 
   fastify.post('/ready', (request, reply) => {
-    return {
-      description: 'Player ready'
-    };
+    const userInput = request.body.userInput;
+    return reply.send(`
+      <tr>
+      <td></td>
+      <td>${userInput}</td>
+</tr>
+      <tr>
+      <td></td>
+      <td>Response from server</td>
+</tr>
+    <tr id="queryRow">
+      <td class="invite">$</td>
+      <td class="input">
+        <form id="inputForm">
+          <textarea name="userInput"
+            id="commandInput" rows="5" maxlength="300" autofocus
+          ></textarea>
+        </form>
+      </td>
+    </tr>
+    `)
   });
 
-  fastify.post('/card', (request, reply) => {
-    return {
-      description: 'Current card'
-    };
-  });
-
-  fastify.get('/modes', (request, reply) => {
-    fastify.pg.connect((err, client, release) => {
-      if (err) return reply.send(err)
-
-      client.query(
-        'SELECT * FROM mode;',
-        (err, result) => {
-          reply.send(result.rows);
-        }
-      )
-    })
+  fastify.get('/card', (request, reply) => {
+    return reply.sendFile('index.html');
   });
 }

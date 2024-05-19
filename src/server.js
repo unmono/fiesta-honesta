@@ -1,13 +1,17 @@
-import path from 'path';
-import process from 'node:process';
+import path from "node:path"
+import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 import Fastify from 'fastify';
 import fastifyEnv from '@fastify/env';
-import { fastifyPlugin } from "fastify-plugin";
-import { fastifyPostgres } from "@fastify/postgres";
+import fastifyStatic from "@fastify/static";
+import { fastifyFormbody } from "@fastify/formbody";
 
 import { apiRoutes } from "./api-routes.js";
 import connector from "./db/connector.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirmane = path.dirname(__filename);
 
 const fastify = Fastify({
   logger: true
@@ -42,6 +46,11 @@ const envOptions = {
 }
 await fastify.register(fastifyEnv, envOptions)
 
+fastify.register(fastifyStatic, {
+  root: path.join(__dirmane, 'public'),
+  prefix: '/public/',
+});
+
 const dbOptions = {
   user: fastify.config.POSTGRES_USER,
   password: fastify.config.POSTGRES_PASSWORD,
@@ -51,6 +60,7 @@ const dbOptions = {
 }
 fastify.register(connector, dbOptions);
 
+fastify.register(fastifyFormbody);
 fastify.register(apiRoutes);
 
 fastify.listen({port: fastify.config.PORT}, (err, address) => {
