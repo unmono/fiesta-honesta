@@ -1,4 +1,6 @@
-export default function gameSchemas(fastify, options) {
+import {fastifyPlugin} from "fastify-plugin";
+
+async function gameSchemas(fastify, options) {
   fastify.addSchema({
     $id: 'mode',
     type: 'object',
@@ -16,19 +18,21 @@ export default function gameSchemas(fastify, options) {
       uuid: { type: 'string' },
       name: { type: 'string' },
       game: { type: 'string' },
-      state: { type: 'integer' },
-      preferences: { type: 'integer' },
+      characteristics: { type: 'integer' },
+      abilities: { type: 'integer' },
     },
   });
 
   fastify.addSchema({
     $id: 'playerNew',
     type: 'object',
-    required: [ 'name', 'state', 'preferences' ],
+    required: [ 'name', 'characteristics', 'abilities' ],
     properties: {
       name: { type: 'string' },
-      state: { type: 'integer' },
-      preferences: { type: 'integer' },
+      characteristics: { type: 'integer' },
+      abilities: { type: 'integer' },
     },
   });
 }
+
+export default fastifyPlugin(gameSchemas);

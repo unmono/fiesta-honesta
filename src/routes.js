@@ -3,7 +3,7 @@ export async function apiRoutes (fastify, options) {
   fastify.route({
     method: 'GET',
     url: '/new',
-    handler: fastify.initialResponse,
+    handler: fastify.gameModes,
     schema: {
       response: {
         200: {
@@ -18,8 +18,8 @@ export async function apiRoutes (fastify, options) {
   // as well as game mode specified in url
   fastify.route({
     method: 'POST',
-    url: '/new',
-    handler: '',
+    url: '/new/:mode',
+    handler: fastify.newGame,
     schema: {
       body: { $ref: 'playerNew#' },
     }
@@ -29,36 +29,36 @@ export async function apiRoutes (fastify, options) {
   // and abilities as well as game identifier specified in url
   fastify.route({
     method: 'POST',
-    url: '/game',
-    handler: '',
+    url: '/game/:gameUUID',
+    handler: fastify.participate,
     schema: {
       body: { $ref: 'playerNew#' },
     }
   });
 
-  // At this stage game is created and player is connected to it. Here users can see
-  // all connected users' status
-  fastify.route({
-    method: 'GET',
-    url: '/game',
-  });
-
-  // User can use this endpoint to specify that he is ready for the next turn
-  fastify.post('/ready', (request, reply) => {
-    /*
-    Player claims that he is ready for the next turn
-     */
-    return {
-      description: 'ready'
-    };
-  });
-
-  // Using this endpoint players of one given game can retrieve active task
-  fastify.get('/card', (request, reply) => {
-    return {
-      description: 'Card'
-    };
-  });
+  // // At this stage game is created and player is connected to it. Here users can see
+  // // all connected users' status
+  // fastify.route({
+  //   method: 'GET',
+  //   url: '/game',
+  // });
+  //
+  // // User can use this endpoint to specify that he is ready for the next turn
+  // fastify.post('/ready', (request, reply) => {
+  //   /*
+  //   Player claims that he is ready for the next turn
+  //    */
+  //   return {
+  //     description: 'ready'
+  //   };
+  // });
+  //
+  // // Using this endpoint players of one given game can retrieve active task
+  // fastify.get('/card', (request, reply) => {
+  //   return {
+  //     description: 'Card'
+  //   };
+  // });
 }
 
 export async function cliRoutes (fastify, options) {

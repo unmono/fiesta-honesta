@@ -23,14 +23,14 @@ const envSchema = {
 
 const configuration = {
   // Player characteristics:
-  playerState: [
+  characteristics: [
     'Are you female?',
     'Are you male?',
     'Do you prefer female?',
     'Do you prefer male?',
   ],
   // Player abilities:
-  preferences: [
+  abilities: [
     'Option1',
     'Option2',
     'Option3',
@@ -57,11 +57,11 @@ async function environmentsAndConfig(fastify, options) {
         path: envFile,
         debug: true,
       },
-      confKey: 'env-config',
+      confKey: 'envConfig',
     }
   );
 
-  fastify.decorate('config', {...fastify.env_config, ...configuration});
+  await fastify.decorate('settings', {...fastify.envConfig, ...configuration});
 }
 
 export default fastifyPlugin(environmentsAndConfig);
