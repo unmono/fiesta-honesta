@@ -32,6 +32,6 @@ CREATE INDEX prefs_idx ON card(prefs);
 
 INSERT INTO "mode" (title, "text")
 VALUES
-    ('croud', 'Everyone for himself'),
+    ('crowd', 'Everyone for himself'),
     ('team', 'Team game')
 ;
