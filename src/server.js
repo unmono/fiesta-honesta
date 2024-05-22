@@ -13,6 +13,7 @@ import connector from "./db/connector.js";
 import { apiHandlers } from "./handlers.js";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
+import fastifyCookie from "@fastify/cookie";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirmane = path.dirname(__filename);
@@ -26,7 +27,11 @@ await fastify.register(
   {
     envFile: `${process.cwd()}/dev.env`,
   }
-)
+);
+
+await fastify.register(fastifyCookie, {
+    secret: fastify.config.COOKIE_SECRET,
+});
 
 await fastify.register(fastifyStatic, {
   root: path.join(__dirmane, 'public'),
@@ -36,11 +41,11 @@ await fastify.register(fastifyStatic, {
 await fastify.register(
   connector,
   {
-    user: fastify.settings.POSTGRES_USER,
-    password: fastify.settings.POSTGRES_PASSWORD,
-    database: fastify.settings.POSTGRES_DB,
-    host: fastify.settings.POSTGRES_HOST,
-    post: fastify.settings.POSTGRES_PORT,
+    user: fastify.config.POSTGRES_USER,
+    password: fastify.config.POSTGRES_PASSWORD,
+    database: fastify.config.POSTGRES_DB,
+    host: fastify.config.POSTGRES_HOST,
+    post: fastify.config.POSTGRES_PORT,
   }
 );
 
@@ -67,7 +72,7 @@ await fastify.register(apiHandlers);
 await fastify.register(apiRoutes, { prefix: '/api' });
 // await fastify.register(cliRoutes, { prefix: '/cli' });
 
-fastify.listen({port: fastify.settings.PORT}, (err, address) => {
+fastify.listen({port: fastify.config.PORT}, (err, address) => {
   if (err) {
     fastify.log.error(err);
     process.exit(1);

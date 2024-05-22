@@ -29,30 +29,44 @@ export async function apiRoutes (fastify, options) {
   // and abilities as well as game identifier specified in url
   fastify.route({
     method: 'POST',
-    url: '/game/:gameUUID',
+    url: '/game/:gameId',
     handler: fastify.participate,
     schema: {
       body: { $ref: 'playerNew#' },
     }
   });
 
-  // // At this stage game is created and player is connected to it. Here users can see
-  // // all connected users' status
-  // fastify.route({
-  //   method: 'GET',
-  //   url: '/game',
-  // });
-  //
-  // // User can use this endpoint to specify that he is ready for the next turn
-  // fastify.post('/ready', (request, reply) => {
-  //   /*
-  //   Player claims that he is ready for the next turn
-  //    */
-  //   return {
-  //     description: 'ready'
-  //   };
-  // });
-  //
+  // At this stage game is created and player is connected to it. Here users can see
+  // all connected users' status
+  fastify.route({
+    method: 'GET',
+    url: '/game',
+    handler: fastify.gameInfo,
+    schema: {
+      response: {
+        200: {
+          type: 'array',
+          items: { $ref: 'playerFull#' },
+        }
+      }
+    }
+  });
+
+  // User can use this endpoint to specify that he is ready for the next turn
+  fastify.route({
+    method: 'POST',
+    url: '/ready',
+    handler: fastify.playerReady,
+    schema: {
+      body: {
+        type: 'object',
+        properties: {
+          playerId: { type: 'integer' },
+        }
+      }
+    }
+  });
+
   // // Using this endpoint players of one given game can retrieve active task
   // fastify.get('/card', (request, reply) => {
   //   return {

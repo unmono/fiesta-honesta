@@ -13,6 +13,8 @@ const envSchema = {
   ],
   properties: {
     PORT: { type: 'string', default: 3000, },
+    COOKIE_SECRET: { type: 'string', default: 'needs-to-be-changed', },
+
     POSTGRES_USER: { type: 'string' },
     POSTGRES_PASSWORD: { type: 'string' },
     POSTGRES_DB: { type: 'string' },
@@ -61,7 +63,7 @@ async function environmentsAndConfig(fastify, options) {
     }
   );
 
-  await fastify.decorate('settings', {...fastify.envConfig, ...configuration});
+  await fastify.decorate('config', {...fastify.envConfig, ...configuration});
 }
 
 export default fastifyPlugin(environmentsAndConfig);

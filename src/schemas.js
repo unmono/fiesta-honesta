@@ -15,11 +15,11 @@ async function gameSchemas(fastify, options) {
     $id: 'playerFull',
     type: 'object',
     properties: {
-      uuid: { type: 'string' },
       name: { type: 'string' },
       game: { type: 'string' },
       characteristics: { type: 'integer' },
       abilities: { type: 'integer' },
+      ready: { type: 'boolean' },
     },
   });
 

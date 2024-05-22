@@ -4,25 +4,6 @@ CREATE TABLE IF NOT EXISTS "mode" (
     "text" VARCHAR(255)
 );
 
-CREATE TABLE IF NOT EXISTS game(
-    id SERIAL PRIMARY KEY,
-    uuid UUID DEFAULT gen_random_uuid(),
-    "mode" INTEGER REFERENCES "mode"(id) ON DELETE CASCADE,
-    open BOOLEAN DEFAULT true
-);
-CREATE INDEX game_id_idx ON game(uuid);
-
-CREATE TABLE IF NOT EXISTS player(
-    id SERIAL PRIMARY KEY,
-    uuid UUID DEFAULT gen_random_uuid(),
-    name VARCHAR(31),
-    characteristics SMALLINT,
-    abilities INTEGER, -- bigint?
-    ready BOOLEAN DEFAULT false,
-    game INTEGER REFERENCES game(id) ON DELETE CASCADE
-);
-CREATE INDEX game_idx ON player(game);
-
 CREATE TABLE IF NOT EXISTS card(
     id SERIAL PRIMARY KEY,
     "mode" INTEGER REFERENCES "mode"(id),
@@ -31,6 +12,23 @@ CREATE TABLE IF NOT EXISTS card(
     "text" TEXT
 );
 CREATE INDEX abilities_idx ON card(abilities);
+
+CREATE TABLE IF NOT EXISTS game(
+    id SERIAL PRIMARY KEY,
+    "mode" INTEGER REFERENCES "mode"(id) ON DELETE CASCADE,
+    open BOOLEAN DEFAULT true,
+    card INTEGER REFERENCES card(id) ON DELETE SET NULL DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS player(
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(31),
+    characteristics SMALLINT,
+    abilities INTEGER, -- bigint?
+    ready BOOLEAN DEFAULT false,
+    game INTEGER REFERENCES game(id) ON DELETE CASCADE
+);
+CREATE INDEX game_idx ON player(game);
 
 
 INSERT INTO "mode" (title, "text")
