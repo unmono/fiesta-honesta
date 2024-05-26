@@ -41,7 +41,7 @@ export async function apiRoutes (fastify, options) {
   fastify.route({
     method: 'GET',
     url: '/game',
-    handler: fastify.gameInfo,
+    handler: fastify.gamePlayers,
     schema: {
       response: {
         200: {
@@ -58,21 +58,21 @@ export async function apiRoutes (fastify, options) {
     url: '/ready',
     handler: fastify.playerReady,
     schema: {
-      body: {
-        type: 'object',
-        properties: {
-          playerId: { type: 'integer' },
-        }
-      }
+      body: {}
     }
   });
 
-  // // Using this endpoint players of one given game can retrieve active task
-  // fastify.get('/card', (request, reply) => {
-  //   return {
-  //     description: 'Card'
-  //   };
-  // });
+  // Get with stream
+  fastify.route({
+    method: 'GET',
+    url: '/card',
+    handler: fastify.card,
+    schema: {
+      response: {
+        // 200:
+      }
+    }
+  });
 }
 
 export async function cliRoutes (fastify, options) {

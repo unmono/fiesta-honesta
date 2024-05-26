@@ -2,28 +2,54 @@ import { EventEmitter } from "node:events";
 
 import { fastifyPlugin } from "fastify-plugin";
 
+import {
+  fetchOpponentsQuery,
+  newPlayerQuery,
+  newGameQuery,
+  playerReadyQuery,
+  selectModesQuery,
+  fetchCardByPlayerQuery,
+} from "./db/queries.js";
+
 const gameReadyEmitter = new EventEmitter();
 
 async function newPlayer(options, client, reply) {
-  console.log(options.values);
-  const newPlayer = await client.query(
-    'INSERT INTO player(name, characteristics, abilities, game) VALUES($1, $2, $3, $4) RETURNING "id";',
-    Object.values(options)
-  )
-
-  reply.setCookie('player', newPlayer.rows[0].id.toString(), {
-    httpOnly: true,
-    signed: true,
-  });
+  const { rows, rowCount } = await client.query(newPlayerQuery, Object.values(options));
+  if (rowCount === 1) {
+    reply.setCookie('player', rows[0].id.toString(), {
+      httpOnly: true,
+      signed: true,
+    });
+    return true;
+  }
+  return false;
 }
 
-async function handlers (fastify, options) {
+class PlayerCookieError extends Error {
+  constructor (message) {
+    super(message);
+    this.name = 'PlayerCookieError'
+  }
+}
+
+function getPlayerIdFromCookie(request, reply) {
+  const playerCookie = request.cookies.player;
+  if (!playerCookie) {
+    throw new PlayerCookieError;
+  }
+  const value = reply.unsignCookie(playerCookie).value;
+  const playerId = parseInt(value);
+  if (isNaN(playerId)) {
+    throw new PlayerCookieError;
+  }
+  return playerId;
+}
+
+async function handlers(fastify, options) {
   fastify.decorate('gameModes', async (request, reply) => {
     const client = await fastify.pg.connect();
     try {
-      const { rows } = await client.query(
-        'SELECT id, title, text FROM "mode";'
-      );
+      const { rows } = await client.query(selectModesQuery);
       return reply.send(rows);
     } finally {
       client.release();
@@ -40,11 +66,17 @@ async function handlers (fastify, options) {
 
     const client = await fastify.pg.connect();
     try {
-      const newGame = await client.query(
-        'INSERT INTO game("mode") VALUES($1) RETURNING id;',
-        [ mode ],
-      );
-      await newPlayer({ name, characteristics, abilities, game: newGame.rows[0].id }, client, reply);
+      const { rows } = await client.query(newGameQuery, [ mode ]);
+      const newGameId = rows[0].id;
+      const created = await newPlayer({ name, characteristics, abilities, game: newGameId }, client, reply);
+      gameReadyEmitter.on('game' + newGameId + 'ready', async (playerId) => {
+        // check if all players are ready
+        // if players ready:
+        //  delete this listener
+        //  select card and update game with it
+        //  set players readiness to false
+        // else do nothing
+      });
       reply.send('created');
     } finally {
       client.release();
@@ -58,47 +90,83 @@ async function handlers (fastify, options) {
     // TODO: Validation
     const client = await fastify.pg.connect();
     try {
-      const game = await client.query(
-        'SELECT id FROM game WHERE id = $1 LIMIT 1;',
-        [ gameId ]
-      );
-      await newPlayer({ name, characteristics, abilities, game: game.rows[0].id }, client, reply);
+      const created = await newPlayer({ name, characteristics, abilities, game: gameId }, client, reply);
     } finally {
       client.release();
     }
   });
 
-  fastify.decorate('gameInfo', async (request, reply) => {
-    const client = await fastify.pg.connect();
-    const playerId = reply.unsignCookie(request.cookies.player).value;
+  fastify.decorate('gamePlayers', async (request, reply) => {
+    let playerId; // Normal?
     try {
-      const players = await client.query(
-        'SELECT po.* FROM player po ' +
-        'JOIN player pi ON pi.game = po.game ' +
-        'WHERE pi.id = $1;',
-        [ playerId ]
-      );
+      playerId = getPlayerIdFromCookie(request, reply);
+    } catch (error) {
+      if (error instanceof PlayerCookieError) {
+        // return bad request
+      }
+      return;
+    }
+    const client = await fastify.pg.connect();
+    try {
+      const players = await client.query(fetchOpponentsQuery, [ playerId ]);
       reply.send(players.rows);
     } finally {
       client.release();
     }
   });
 
-  fastify.decorate('playerReady', async (request, reply) => {
-    const client = await fastify.pg.connect();
-    const playerId = request.body.playerId;
+  fastify.decorate('gameStatus', async (request, reply) => {
+    let playerId;
     try {
-      const { rowCount, rows } = await client.query(
-        'UPDATE player SET ready = true WHERE id = $1 AND ready = false RETURNING game;',
-        [ playerId ]
-      );
+      playerId = getPlayerIdFromCookie(request, reply);
+    } catch (error) {
+      if (error instanceof PlayerCookieError) {
+        // return bad request
+      }
+      return;
+    }
+    const client = await fastify.pg.connect();
+  });
+
+  fastify.decorate('closeGame', async (request, reply) => {
+    // get game id
+    // update open field
+    // check matches
+  });
+
+  fastify.decorate('playerReady', async (request, reply) => {
+    let playerId; // Normal?
+    try {
+      playerId = getPlayerIdFromCookie(request, reply);
+    } catch (error) {
+      if (error instanceof PlayerCookieError) {
+        // return bad request
+      }
+      return;
+    }
+    const client = await fastify.pg.connect();
+    try {
+      const { rowCount, rows } = await client.query(playerReadyQuery, [ playerId ]);
       if (rowCount != 0) {
-        // emit another player ready
-        // catch event in gameInfo
+        gameReadyEmitter.emit('game'+rows[0].game+'ready', playerId);
       }
     } finally {
       client.release();
     }
+  });
+
+  fastify.decorate('card', async (request, reply) => {
+    let playerId; // Normal?
+    try {
+      playerId = getPlayerIdFromCookie(request, reply);
+    } catch (error) {
+      if (error instanceof PlayerCookieError) {
+        // return bad request
+      }
+      return;
+    }
+    const client = await fastify.pg.connect();
+    const cardQuery = await client.query(fetchCardByPlayerQuery, [ playerId ]);
   });
 }
 
