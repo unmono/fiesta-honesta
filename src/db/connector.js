@@ -11,4 +11,15 @@ async function dbConnector(fastify, options) {
   })
 }
 
-export default fastifyPlugin(dbConnector)
+export async function *getConnector(fastify) {
+  let connector;
+  try {
+    connector = await fastify.pg.connect();
+    yield connector;
+  // TODO catch connection success
+  } finally {
+    connector.close();
+  }
+}
+
+export const connector = fastifyPlugin(dbConnector);

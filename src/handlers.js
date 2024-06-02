@@ -4,169 +4,149 @@ import { fastifyPlugin } from "fastify-plugin";
 
 import {
   fetchOpponentsQuery,
-  newPlayerQuery,
   newGameQuery,
   playerReadyQuery,
   selectModesQuery,
   fetchCardByPlayerQuery,
+  changePlayersGameStatus, meQuery, newMeQuery, unreadyPlayersQuery,
 } from "./db/queries.js";
+import {
+  GameIsClosedError,
+  GameIsOpenError,
+  GameLogicError,
+  NotFoundError,
+  PlayerCookieError,
+} from "./exceptions.js";
+import {
+  deletePlayer,
+  getPlayerIdFromCookie,
+  newPlayer,
+  playerReadyHandler,
+} from "./helpers.js";
+import { getConnector } from "./db/connector.js";
 
 const gameReadyEmitter = new EventEmitter();
 
-async function newPlayer(options, client, reply) {
-  const { rows, rowCount } = await client.query(newPlayerQuery, Object.values(options));
-  if (rowCount === 1) {
-    reply.setCookie('player', rows[0].id.toString(), {
-      httpOnly: true,
-      signed: true,
-    });
-    return true;
-  }
-  return false;
-}
-
-class PlayerCookieError extends Error {
-  constructor (message) {
-    super(message);
-    this.name = 'PlayerCookieError'
-  }
-}
-
-function getPlayerIdFromCookie(request, reply) {
-  const playerCookie = request.cookies.player;
-  if (!playerCookie) {
-    throw new PlayerCookieError;
-  }
-  const value = reply.unsignCookie(playerCookie).value;
-  const playerId = parseInt(value);
-  if (isNaN(playerId)) {
-    throw new PlayerCookieError;
-  }
-  return playerId;
-}
-
 async function handlers(fastify, options) {
   fastify.decorate('gameModes', async (request, reply) => {
-    const client = await fastify.pg.connect();
-    try {
-      const { rows } = await client.query(selectModesQuery);
-      return reply.send(rows);
-    } finally {
-      client.release();
-    }
+    const client = await getConnector(fastify);
+    const { rows } = await client.query(selectModesQuery);
+    return reply.send(rows);
+  });
+
+  fastify.decorate('possibleProperties', async (request, reply) => {
+    // const mode = request.params.mode;
+    // TODO: different properties for different game modes
+    return reply.send({
+      characteristics: fastify.settings.characteristics,
+      abilities: fastify.settings.abilities,
+    });
   });
 
   fastify.decorate('newGame', async (request, reply) => {
-    const mode = parseInt(request.params.mode);
-    if (!mode) {
-      // TODO: error
-    }
+    const mode = request.params.mode;
     const { name, characteristics, abilities } = request.body;
-    // TODO: Validation
-
-    const client = await fastify.pg.connect();
+    const client = await getConnector(fastify);
     try {
+      await client.query('BEGIN');
       const { rows } = await client.query(newGameQuery, [ mode ]);
       const newGameId = rows[0].id;
-      const created = await newPlayer({ name, characteristics, abilities, game: newGameId }, client, reply);
-      gameReadyEmitter.on('game' + newGameId + 'ready', async (playerId) => {
-        // check if all players are ready
-        // if players ready:
-        //  delete this listener
-        //  select card and update game with it
-        //  set players readiness to false
-        // else do nothing
-      });
-      reply.send('created');
-    } finally {
-      client.release();
+      await newPlayer({ name, characteristics, abilities, game: newGameId }, client, reply);
+      await client.query('COMMIT');
+      gameReadyEmitter.on('game' + newGameId + 'ready', playerReadyHandler);
+      return reply.redirect(`/game/${ newGameId }`);
+    } catch(e) {
+      await client.query('ROLLBACK');
+      throw(e);
     }
   });
 
   fastify.decorate('participate', async (request, reply) => {
     const gameId = request.params.gameId;
-    // TODO: check
     const { name, characteristics, abilities } = request.body;
-    // TODO: Validation
-    const client = await fastify.pg.connect();
-    try {
-      const created = await newPlayer({ name, characteristics, abilities, game: gameId }, client, reply);
-    } finally {
-      client.release();
-    }
+    const client = await getConnector(fastify);
+    await newPlayer({name, characteristics, abilities, game: gameId}, client, reply);
+    return reply.redirect(`/game/${gameId}`);
   });
 
   fastify.decorate('gamePlayers', async (request, reply) => {
-    let playerId; // Normal?
-    try {
-      playerId = getPlayerIdFromCookie(request, reply);
-    } catch (error) {
-      if (error instanceof PlayerCookieError) {
-        // return bad request
-      }
-      return;
-    }
-    const client = await fastify.pg.connect();
-    try {
-      const players = await client.query(fetchOpponentsQuery, [ playerId ]);
-      reply.send(players.rows);
-    } finally {
-      client.release();
-    }
-  });
-
-  fastify.decorate('gameStatus', async (request, reply) => {
-    let playerId;
-    try {
-      playerId = getPlayerIdFromCookie(request, reply);
-    } catch (error) {
-      if (error instanceof PlayerCookieError) {
-        // return bad request
-      }
-      return;
-    }
-    const client = await fastify.pg.connect();
-  });
-
-  fastify.decorate('closeGame', async (request, reply) => {
-    // get game id
-    // update open field
-    // check matches
+    const playerId = getPlayerIdFromCookie(request, reply);
+    const client = await getConnector(fastify);
+    const players = await client.query(fetchOpponentsQuery, [ playerId ]);
+    return reply.send(players.rows);
   });
 
   fastify.decorate('playerReady', async (request, reply) => {
-    let playerId; // Normal?
-    try {
-      playerId = getPlayerIdFromCookie(request, reply);
-    } catch (error) {
-      if (error instanceof PlayerCookieError) {
-        // return bad request
-      }
-      return;
+    const playerId = getPlayerIdFromCookie(request, reply);
+    const client = await getConnector(fastify);
+    const { rowCount, rows } = await client.query(playerReadyQuery, [ playerId ]);
+    if (rowCount === 1) {
+      const gameId = rows[0].game;
+      gameReadyEmitter.emit('game' + gameId + 'ready', { playerId, gameId, fastify });
+      // return reply.redirect() TODO to game info endpoint
+    } else if (rowCount === 0) {
+      throw new GameIsOpenError();
+    } else {
+      throw new GameLogicError();
     }
-    const client = await fastify.pg.connect();
+  });
+
+  fastify.decorate('changeGameStatus', async (request, reply) => {
+    const passedStatus = request.params.status;
+    const playerId = getPlayerIdFromCookie(request, reply);
+    let newStatus;
+    if (passedStatus === 'open') newStatus = true;
+    else if (passedStatus === 'close') newStatus = false;
+    if (!newStatus) {
+      throw new NotFoundError('No such status');
+    }
+    const client = getConnector(fastify);
     try {
-      const { rowCount, rows } = await client.query(playerReadyQuery, [ playerId ]);
-      if (rowCount != 0) {
-        gameReadyEmitter.emit('game'+rows[0].game+'ready', playerId);
-      }
-    } finally {
-      client.release();
+      await client.query('BEGIN;');
+      const {rows} = await client.query(changePlayersGameStatus, [newStatus, playerId]);
+      await client.query(unreadyPlayersQuery, [rows[0].id]);
+      await client.query('COMMIT;');
+      return reply.send({ ok: true })
+    } catch (e) {
+      await client.query('ROLLBACK;');
+      throw e;
     }
   });
 
   fastify.decorate('card', async (request, reply) => {
-    let playerId; // Normal?
-    try {
-      playerId = getPlayerIdFromCookie(request, reply);
-    } catch (error) {
-      if (error instanceof PlayerCookieError) {
-        // return bad request
-      }
-      return;
+    const playerId = getPlayerIdFromCookie(request, reply);
+    const client = await getConnector();
+    const { rows, rowCount } = await client.query(fetchCardByPlayerQuery, [ playerId ]);
+    if (rowCount !== 1) {
+      throw new GameLogicError();
     }
-    const client = await fastify.pg.connect();
-    const cardQuery = await client.query(fetchCardByPlayerQuery, [ playerId ]);
+    return reply.send(rows);
+  });
+
+  fastify.decorate('leave', async (request, reply) => {
+    const playerId = getPlayerIdFromCookie(request, reply);
+    const client = await getConnector(fastify);
+    await deletePlayer(playerId, client, reply);
+    return reply.status(200).send({ ok: true });
+  });
+
+  fastify.decorate('me', async (request, reply) => {
+    const playerId = getPlayerIdFromCookie(request, reply);
+    const client = await getConnector(fastify);
+    const { rows } = await client.query(meQuery, [ playerId ]);
+    return reply.send(rows);
+  });
+
+  fastify.decorate('newMe', async (request, reply) => {
+    const playerId = getPlayerIdFromCookie(request, reply);
+    const { abilities, characteristics } = request.body;
+    const client = await getConnector(fastify);
+    await client.query(newMeQuery, [ abilities, characteristics, playerId ]);
+  });
+
+  fastify.decorate('gameStatus', async (request, reply) => {
+    const playerId = getPlayerIdFromCookie(request, reply);
+    // Stream here
   });
 }
 

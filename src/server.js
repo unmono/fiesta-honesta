@@ -9,7 +9,7 @@ import { fastifyFormbody } from "@fastify/formbody";
 import configuration from './config.js';
 import { apiRoutes, cliRoutes } from "./routes.js";
 import gameSchemas from "./schemas.js";
-import connector from "./db/connector.js";
+import { connector } from "./db/connector.js";
 import { apiHandlers } from "./handlers.js";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";

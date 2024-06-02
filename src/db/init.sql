@@ -15,8 +15,11 @@ CREATE INDEX abilities_idx ON card(abilities);
 
 CREATE TABLE IF NOT EXISTS game(
     id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT current_timestamp,
     "mode" INTEGER REFERENCES "mode"(id) ON DELETE CASCADE,
     "open" BOOLEAN DEFAULT true,
+    player1 VARCHAR(31),
+    player2 VARCHAR(31),
     card INTEGER REFERENCES card(id) ON DELETE SET NULL DEFAULT NULL
 );
 

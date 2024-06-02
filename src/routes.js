@@ -14,6 +14,36 @@ export async function apiRoutes (fastify, options) {
     }
   });
 
+  fastify.route({
+    methdo: 'GET',
+    url: '/new/:mode',
+    handler: fastify.playerProperties,
+    schema: {
+      params: {
+        type: 'object',
+        properties: {
+          mode: { type: 'integer', minimum: 1 },
+        },
+        required: [ 'mode' ],
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            characteristics: {
+              type: 'array',
+              items: { type: 'string'},
+            },
+            abilities: {
+              type: 'array',
+              items: { type: 'string'},
+            }
+          }
+        }
+      }
+    },
+  });
+
   // User should send his player characteritics and abilities to application
   // as well as game mode specified in url
   fastify.route({
@@ -21,6 +51,13 @@ export async function apiRoutes (fastify, options) {
     url: '/new/:mode',
     handler: fastify.newGame,
     schema: {
+      params: {
+        type: 'object',
+        properties: {
+          mode: { type: 'integer', minimum: 1 },
+        },
+        required: [ 'mode' ],
+      },
       body: { $ref: 'playerNew#' },
     }
   });
@@ -29,9 +66,16 @@ export async function apiRoutes (fastify, options) {
   // and abilities as well as game identifier specified in url
   fastify.route({
     method: 'POST',
-    url: '/game/:gameId',
+    url: '/game/:gameId/participate', // todo add key
     handler: fastify.participate,
     schema: {
+      params: {
+        type: 'object',
+        properties: {
+          gameId: { type: 'integer', minimum: 1 }
+        },
+        required: [ 'gameId' ]
+      },
       body: { $ref: 'playerNew#' },
     }
   });
@@ -40,9 +84,16 @@ export async function apiRoutes (fastify, options) {
   // all connected users' status
   fastify.route({
     method: 'GET',
-    url: '/game',
+    url: '/game/:gameId',
     handler: fastify.gamePlayers,
     schema: {
+      params: {
+        type: 'object',
+        properties: {
+          gameId: { type: 'integer', minimum: 1 }
+        },
+        required: [ 'gameId' ]
+      },
       response: {
         200: {
           type: 'array',
@@ -55,12 +106,14 @@ export async function apiRoutes (fastify, options) {
   // User can use this endpoint to specify that he is ready for the next turn
   fastify.route({
     method: 'POST',
-    url: '/ready',
+    url: '/player/ready',
     handler: fastify.playerReady,
     schema: {
       body: {}
     }
   });
+
+  // todo player abilities to browse and change
 
   // Get with stream
   fastify.route({
